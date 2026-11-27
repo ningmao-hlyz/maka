@@ -28,6 +28,7 @@ mod agent;
 mod animation;
 mod app;
 mod blur;
+mod box_none;
 mod canvas;
 #[cfg(any(feature = "dev", feature = "terminal"))]
 mod capture;

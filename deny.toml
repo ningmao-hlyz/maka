@@ -78,6 +78,7 @@ license-files = [{ path = "LICENSE", hash = 0xc2efc575 }]
 
 [sources]
 allow-git = [
+  "https://github.com/longbridge/nsh-system-controls",
   "https://github.com/microsoft/mxc",
   "https://github.com/maka-agent/cua",
   "https://github.com/proptest-rs/proptest",

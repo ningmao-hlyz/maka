@@ -1174,6 +1174,7 @@ impl Surface {
         }
         crate::access::batch_applied(self);
         crate::input::batch_applied(self);
+        crate::box_none::batch_applied(self);
         for command in notifications {
             crate::notifications::command(self, command);
         }

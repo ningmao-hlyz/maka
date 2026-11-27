@@ -61,6 +61,8 @@ mod keyboard;
 #[cfg(target_os = "macos")]
 mod keymap_ime;
 #[cfg(target_os = "macos")]
+mod layout_animation_bench;
+#[cfg(target_os = "macos")]
 mod mask_corners;
 #[cfg(target_os = "macos")]
 mod menu_labels;
@@ -130,7 +132,9 @@ fn main() {
     } else {
         #[cfg(target_os = "macos")]
         {
-            if std::env::var_os("NSH_WINDOW_FOCUS_CHECK_ONLY").is_some() {
+            if std::env::var_os("NSH_LAYOUT_ANIMATION_BENCH").is_some() {
+                layout_animation_bench::run();
+            } else if std::env::var_os("NSH_WINDOW_FOCUS_CHECK_ONLY").is_some() {
                 window_focus::run();
             } else if std::env::var_os("NSH_TAP_FEEDBACK_CHECK_ONLY").is_some() {
                 tap_feedback::run();

@@ -3391,6 +3391,7 @@
 			"focus",
 			"blur",
 			"clearSelection",
+			"selectAll",
 			"scrollTo",
 			"zoomTo",
 			"scrollToIndex",

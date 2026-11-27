@@ -41,8 +41,8 @@ mod webview;
 
 pub use fs::grant_user_files;
 pub use updater::{
-    PackageVersion, UpdatePrompt, UpdatePromptOptions, UpdaterHost, UpdaterSink, prompt_for_update,
-    set_update_presenter,
+    PackageVersion, UpdatePrompt, UpdatePromptOptions, UpdaterHost, UpdaterSink, UpdaterTransport,
+    prompt_for_update, set_update_presenter, set_updater_transport, updater_transport,
 };
 
 /// The [`crate::element::Quotas`] kind WebSockets count under: the `websocket`
@@ -82,9 +82,6 @@ pub fn registries() -> &'static [Registry] {
         let mut mobile = Registry::runtime("nsh/mobile");
         mobile
             .register::<crate::mobile::TabBar>()
-            .register::<crate::mobile::SegmentedControl>()
-            .register::<crate::mobile::Switch>()
-            .register::<crate::mobile::DateTimePicker>()
             .module::<android::BackHandler>()
             .module::<haptics::Haptics>()
             .module::<app_settings::AppSettings>();

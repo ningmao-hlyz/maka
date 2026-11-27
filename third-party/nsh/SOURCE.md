@@ -20,7 +20,7 @@
 # Native Shell (NSH)
 
 This directory contains NSH from [`longbridge/nsh`](https://github.com/longbridge/nsh),
-synchronized through revision `a901baa2e2d82a17066abb589b542b0a90890e0a`.
+synchronized through revision `c4e4e7ae3d2dbb4f3a79eeba393a00493e645dd6`.
 The original import came from `M4n5ter/nsh`, branch
 `tui/terminal-backend`, at `de176695240d550f2b303643b8019146c7989e7f`.
 
@@ -55,6 +55,11 @@ shortcuts. Windows uses the upstream selection lifecycle when text changes.
 Asset builds use upstream app roots, package-relative paths and default unresolved-import errors; built-in plugin builds declare the Maka
 repository as their shared root. Callers migrate with upstream rather than
 keeping aliases or older implementations.
+
+The iOS shell links the official `nsh-system-controls` extension for UIKit
+segmented controls and switches. Its Cargo dependencies use the same vendored
+NSH types as the host; the UI compiler and runtime register the extension's
+own module.
 
 Installed plugin modules are immutable compiled artifacts. A compiler contract
 change requires rebuilding and repinning external UI packages; invalidating a
@@ -92,6 +97,10 @@ terminal surfaces. Desktop window operations take explicit `WindowRef` values.
 - **Native lifecycle:** terminal surfaces keep host ownership of windows and
   event loops while honoring menu labels, quit requests and system session
   termination. Stopping an engine revokes its input and frame receipts.
+- **Metal shader inputs:** input transfers share the queue for surface and
+  readback draws so updating a reused texture cannot change a queued frame.
+  Frames that finish during collection stay pending if newer than the
+  frame chosen for display.
 
 ## Maintenance and verification
 

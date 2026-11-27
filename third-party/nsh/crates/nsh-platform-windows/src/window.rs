@@ -1701,6 +1701,7 @@ fn handle(
         WM_WINDOWPOSCHANGED if data.top_level => {
             crate::window_state::report_main(surface);
             crate::system::lifecycle_changed(surface);
+            crate::box_none::shown_or_hidden(hwnd);
         }
         // An embedded surface's: its root window's ([`observe_root`]).
         WM_NSH_ROOT => crate::system::lifecycle_changed(surface),
@@ -1728,6 +1729,7 @@ fn handle(
         }
         WM_DESTROY => {
             surface.activation_changed(false);
+            crate::box_none::forget(hwnd);
             crate::window_close::destroyed(surface);
             crate::tray::destroyed(hwnd);
             crate::global_shortcut::destroyed(hwnd);
@@ -1864,6 +1866,7 @@ fn window_api(
                 // Shown, hidden, minimized or restored: the app's state
                 // follows its own windows (the host never shows).
                 crate::system::lifecycle_changed(surface);
+                crate::box_none::shown_or_hidden(hwnd);
             }
             None
         }
@@ -2478,6 +2481,13 @@ impl Drop for Ticker {
             let _ = t.join();
         }
     }
+}
+
+/// The root node of the window `hwnd` is: one of the app's own, or the
+/// surface's own top-level window (`ROOT_ID`); none for an embedded one.
+pub(crate) fn root_id(hwnd: HWND) -> Option<NodeId> {
+    let data = data(hwnd)?;
+    data.window.or(data.top_level.then_some(ROOT_ID))
 }
 
 /// The surface window `hwnd` (its own or one of the app's own) is of

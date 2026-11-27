@@ -5812,6 +5812,15 @@ impl<M: TextEngine> Core<M> {
             Prop::Native(NativeProp::AllowOrigin(Some(origin))) => {
                 Prop::Native(NativeProp::AllowOrigin(self.check_allow_origin(&origin)))
             }
+            Prop::Native(NativeProp::AllowNavigation(Some(hosts))) => {
+                match crate::access::WebHosts::parse(&hosts) {
+                    Ok(_) => Prop::Native(NativeProp::AllowNavigation(Some(hosts))),
+                    Err(e) => {
+                        self.deny(format!("`allowNavigation`: {e}"));
+                        Prop::Native(NativeProp::AllowNavigation(None))
+                    }
+                }
+            }
             prop => prop,
         };
         if self.access.is_unrestricted() {
@@ -13734,6 +13743,9 @@ fn apply_native(control: &mut NativeProps, prop: NativeProp) {
         }
         (NativeProps::WebView(p), P::AllowOrigin(v)) => {
             p.allow_origin = v.and_then(|o| crate::access::WebOrigin::parse(&o).ok());
+        }
+        (NativeProps::WebView(p), P::AllowNavigation(v)) => {
+            p.allow_navigation = v.and_then(|h| crate::access::WebHosts::parse(&h).ok());
         }
         (NativeProps::WebView(p), P::InjectedJavaScript(v)) => p.injected_js = v,
         (NativeProps::WebView(p), P::InjectedJavaScriptBefore(v)) => p.injected_js_before = v,

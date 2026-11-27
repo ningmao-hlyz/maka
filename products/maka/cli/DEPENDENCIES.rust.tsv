@@ -114,10 +114,9 @@ blocking@1.7.0		X										X
 borrow-or-share@0.2.4													X							
 boxed_error@0.2.3												X								
 brotli-decompressor@4.0.3					X							X								
-brotli-decompressor@5.0.3					X							X								
-brotli-decompressor@6.0.1					X							X								
+brotli-decompressor@6.4.0					X							X								
 brotli@6.0.0					X							X								
-brotli@9.0.0					X							X								
+brotli@9.1.3					X							X								
 bstr@1.13.1		X										X								
 bumpalo@3.20.3		X										X								
 by_address@1.2.1		X										X								
@@ -1542,7 +1541,7 @@ wl-clipboard-rs@0.9.4		X										X
 wmi@0.18.4		X										X								
 wnaf@0.14.1		X										X								
 writeable@0.6.4																	X			
-wuff@0.2.9												X								
+wuff@0.2.10												X								
 wyz@0.5.1												X								
 x11@2.21.0												X								
 x11rb-protocol@0.13.2		X										X								
