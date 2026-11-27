@@ -209,15 +209,27 @@ fn fire(surface: &Rc<Surface>, binding: &KeyBinding, time: u32) {
 }
 
 fn fires_binding(surface: &Surface, root: &NshView, binding: &KeyBinding) -> bool {
-    let yields = surface
-        .keymap
-        .keymap
-        .borrow()
-        .as_ref()
-        .is_some_and(|keymap| keymap.gives_way(binding));
-    binding.window.is_none_or(|window| window == root.id())
-        && !crate::text_input::composing_focused(surface)
-        && fires(surface, root, binding.in_text, binding.within, yields)
+    if crate::text_input::composing_focused(surface) {
+        return false;
+    }
+    let Some((editing, control, path)) = focus_context(surface, root) else {
+        return false;
+    };
+    let eligible = |candidate: &KeyBinding| {
+        candidate.window.is_none_or(|window| window == root.id())
+            && candidate.fallback == binding.fallback
+            && (candidate.in_text || !editing)
+            && candidate.within.is_none_or(|scope| path.contains(&scope))
+    };
+    eligible(binding)
+        && (!control
+            || editing
+            || surface
+                .keymap
+                .keymap
+                .borrow()
+                .as_ref()
+                .is_none_or(|table| !table.gives_way(binding, eligible)))
 }
 
 /// Replays capture-phase shortcut matching for a held GDK key event.
@@ -450,7 +462,7 @@ pub(crate) fn raw(surface: &Surface, event: &gtk::gdk::Event, repeat: bool) -> R
 }
 
 /// The binding of `claims` (newest first) whose window is `window`, whose
-/// trigger `matches` best and that `eligible` fires (`keymap::fires`), and
+/// trigger `matches` best and that `eligible` fires ([`fires_binding`]), and
 /// what its `pass_through` does with the key; `repeat` is the auto-repeat
 /// of a key whose binding fires once (`KeyMatch`'s rules).
 ///
@@ -526,23 +538,6 @@ fn focus_context(surface: &Surface, root: &NshView) -> Option<(bool, bool, Vec<N
     let control = crate::key_focus::is_control(surface, &focus);
     let path = crate::input::focus_path(surface, root, Some(focus));
     Some((editing, control, path))
-}
-
-/// Whether a binding fires where the focus is: never while it is in
-/// another surface, in a text field or hosted widget only when the binding
-/// may (`in_text`), and inside `within` when scoped.
-fn fires(
-    surface: &Surface,
-    root: &NshView,
-    in_text: bool,
-    within: Option<NodeId>,
-    gives_way: bool,
-) -> bool {
-    focus_context(surface, root).is_some_and(|(editing, control, path)| {
-        (in_text || !editing)
-            && !(control && gives_way)
-            && within.is_none_or(|scope| path.contains(&scope))
-    })
 }
 
 /// The keyval that `key` types with Shift on the display's layout (`slash`
@@ -748,7 +743,7 @@ mod tests {
     }
 
     /// An ineligible binding never shadows an eligible one: the raw view
-    /// rules (`keymap::fires`: a text field, a control's Return or Space)
+    /// rules (`fires_binding`: a text field, a control's Return or Space)
     /// choose before match quality does.
     #[test]
     fn pick_skips_ineligible_bindings() {

@@ -285,12 +285,21 @@ impl FrameTarget {
         self.frame = frame;
     }
 
-    /// Forgets the frame read back; `true` when there was one.
+    /// Retires the displayed and in-flight frames; `true` when one was shown.
     pub(crate) fn clear_frame(&mut self) -> bool {
         let had = self.frame.width != 0;
+        #[cfg(any(target_vendor = "apple", windows))]
+        let had = had || self.shown_texture().is_some();
         self.frame = Frame::default();
-        // A queued frame must not restore a layer that was cleared.
         self.target = None;
+        #[cfg(any(target_vendor = "apple", windows))]
+        {
+            self.surfaces.take();
+        }
+        #[cfg(windows)]
+        {
+            self.previous.take();
+        }
         had
     }
 

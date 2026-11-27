@@ -942,12 +942,12 @@ impl Keymap {
     /// [`crate::input::presses_focused_control`]). The focus' own bindings
     /// ([`KeyBinding::for_focus`]) take such a key, the others give way to
     /// the control. When a pointer gave the focus
-    /// (`Keymap::pointer_focus`) and a binding of the key takes it over
+    /// (`Keymap::pointer_focus`) and an `eligible` binding takes the key over
     /// such a focus ([`OverFocused::Pointer`]), only those take
     /// it: the focus' own give way to them too (a `Select` trigger's Space
-    /// opening its list). A platform that matches the bindings itself
-    /// (GTK's shortcuts) asks it as [`Self::find_with`] does.
-    pub fn gives_way(&self, binding: &KeyBinding) -> bool {
+    /// opening its list). `eligible` must account for the current window,
+    /// focus scope and dispatch phase, also when GTK matches the keys itself.
+    pub fn gives_way(&self, binding: &KeyBinding, eligible: impl Fn(&KeyBinding) -> bool) -> bool {
         let key = binding.keystroke;
         if !crate::input::presses_focused_control(key.key, key.modifiers) {
             return false;
@@ -956,12 +956,16 @@ impl Keymap {
             && self
                 .bindings
                 .iter()
-                .any(|b| b.over_pointer_focus() && b.keystroke == key);
+                .any(|b| self.overrides_control(b) && b.keystroke == key && eligible(b));
         if over {
-            !binding.over_pointer_focus()
+            !self.overrides_control(binding)
         } else {
             !binding.for_focus
         }
+    }
+
+    fn overrides_control(&self, binding: &KeyBinding) -> bool {
+        self.pointer_focus && binding.over_pointer_focus()
     }
 
     /// No bindings: the platform need not look at keys.
@@ -1101,17 +1105,33 @@ impl Keymap {
             control,
             covered,
         } = focus;
-        // A focused control's Return and Space: only the bindings that do
-        // not give way to it take them (`Self::gives_way`).
-        let pressing = control && !editing;
-        let found = self.bindings.iter().rev().find(|b| {
-            b.keystroke == keystroke
-                && (b.in_text || !editing)
+        let pressing = control
+            && !editing
+            && crate::input::presses_focused_control(keystroke.key, keystroke.modifiers);
+        let eligible = |b: &KeyBinding| {
+            (b.in_text || !editing)
                 && b.window.is_none_or(|w| w == window)
-                && !(pressing && self.gives_way(b))
-                && eligible(b)
                 && !(b.for_focus && covered)
-        });
+                && eligible(b)
+        };
+        let mut found = None;
+        for b in self.bindings.iter().rev() {
+            if b.keystroke != keystroke {
+                continue;
+            }
+            if !pressing || self.overrides_control(b) {
+                if eligible(b) {
+                    found = Some(b);
+                    break;
+                }
+            } else if found.is_none() && b.for_focus && eligible(b) {
+                found = Some(b);
+                // An older eligible pointer override can still take the key.
+                if !self.pointer_focus {
+                    break;
+                }
+            }
+        }
         match found {
             None => KeyMatch::None,
             Some(b) if repeat && !b.repeat && b.pass_through => KeyMatch::None,
@@ -1180,6 +1200,45 @@ mod tests {
             table.find_fallback_at_with(8, escape, false, false, false, |_| true),
             KeyMatch::None
         );
+    }
+
+    #[test]
+    fn pointer_overrides_only_take_space_in_their_window_scope_and_phase() {
+        let space = Keystroke::parse_with("space", false).unwrap();
+        let focus = KeyBinding::new(1, space, When::Always, false)
+            .in_window(7)
+            .focus_keys(true);
+        let pointer = KeyBinding::new(2, space, When::Always, false)
+            .in_window(7)
+            .over_focused(OverFocused::Pointer);
+        for override_binding in [
+            pointer.in_window(8),
+            KeyBinding {
+                within: Some(9),
+                ..pointer
+            },
+            KeyBinding {
+                fallback: true,
+                ..pointer
+            },
+        ] {
+            let table = Keymap::new(vec![focus, override_binding]).with_pointer_focus(true);
+            assert_eq!(
+                table.find_at(7, space, false, true, false),
+                KeyMatch::Fire(1)
+            );
+        }
+        let scoped = KeyBinding {
+            within: Some(9),
+            ..pointer
+        };
+        let table = Keymap::new(vec![focus, scoped]).with_pointer_focus(true);
+        assert_eq!(
+            table.find_at_with(7, space, false, true, false, |id| id == 9),
+            KeyMatch::Fire(2)
+        );
+        assert!(!table.gives_way(&focus, |b| b.within.is_none()));
+        assert!(table.gives_way(&focus, |_| true));
     }
 
     #[test]
