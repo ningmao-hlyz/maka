@@ -418,6 +418,13 @@ pub const MIGRATIONS: &[maka_event_log::migration::Migration] = &[
         configure: None,
         data: None,
     },
+    maka_event_log::migration::Migration {
+        version: 59,
+        description: "index live catalog runs for active child lookups",
+        sql: include_str!("../migrations/0059_catalog_live_runs_index.sql"),
+        configure: None,
+        data: None,
+    },
 ];
 
 #[cfg(test)]
